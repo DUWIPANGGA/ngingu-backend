@@ -1,0 +1,21 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kaliwedi-web
+    restart: always
+    ports:
+      - "8091:80"
+    volumes:
+      # Persist storage directory untuk uploads (foto laporan, avatar, APK)
+      - ./storage:/var/www/html/storage
+      # Mount environment file agar tidak hilang saat rebuild
+      - ./.env:/var/www/html/.env
+    networks:
+      - shared_network
+
+networks:
+  shared_network:
+    external: true
+    name: miomidev-web_miomidev-network
