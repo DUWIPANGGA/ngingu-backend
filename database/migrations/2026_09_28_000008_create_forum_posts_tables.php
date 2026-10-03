@@ -21,7 +21,7 @@ return new class extends Migration
 
         Schema::create('forum_posts', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('category_id')->constrained('forum_categories')->cascadeOnDelete();
             $table->foreignUuid('scan_id')->nullable()->constrained('fish_scans')->nullOnDelete();
             $table->string('title');

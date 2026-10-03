@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('post_id')->constrained('forum_posts')->cascadeOnDelete();
             $table->foreignId('parent_id')->nullable()->constrained('forum_comments')->cascadeOnDelete();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
             $table->text('content_html');
             $table->json('images')->nullable();
             $table->integer('votes_count')->default(0);
@@ -24,7 +24,7 @@ return new class extends Migration
 
         Schema::create('forum_votes', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
             $table->string('votable_type');
             $table->unsignedBigInteger('votable_id');
             $table->tinyInteger('value')->comment('1 = upvote, -1 = downvote');
@@ -36,7 +36,7 @@ return new class extends Migration
 
         Schema::create('forum_bookmarks', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('post_id')->constrained('forum_posts')->cascadeOnDelete();
             $table->timestamps();
 
@@ -45,7 +45,7 @@ return new class extends Migration
 
         Schema::create('forum_follows', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('post_id')->constrained('forum_posts')->cascadeOnDelete();
             $table->timestamps();
 
@@ -54,7 +54,7 @@ return new class extends Migration
 
         Schema::create('forum_reports', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('reporter_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignUuid('reporter_id')->constrained('users')->cascadeOnDelete();
             $table->string('reportable_type');
             $table->unsignedBigInteger('reportable_id');
             $table->string('reason');
