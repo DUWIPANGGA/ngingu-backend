@@ -8,8 +8,8 @@ use App\Models\NotificationSetting;
 use App\Models\OauthAccount;
 use App\Models\User;
 use App\Notifications\NewDeviceLogin;
+use App\Notifications\QueuedVerifyEmail;
 use App\Support\Notifier;
-use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
+use Throwable;
 
 /**
  * Endpoint autentikasi (API.md §3 / FR-01).
@@ -69,11 +70,19 @@ class AuthController extends Controller
             ]);
         }
 
-        $user->notify(new VerifyEmail);
+        $verificationQueued = true;
+        try {
+            $user->notify(new QueuedVerifyEmail);
+        } catch (Throwable $e) {
+            $verificationQueued = false;
+            report($e);
+        }
 
         return $this->created(
             $this->authPayload($user, $user->createToken('auth_token', ['*'], $this->tokenExpiry())->plainTextToken),
-            'Registrasi berhasil. Email verifikasi telah dikirim.'
+            $verificationQueued
+                ? 'Registrasi berhasil. Email verifikasi sedang diproses.'
+                : 'Akun berhasil dibuat, tetapi email verifikasi belum dapat dijadwalkan.'
         );
     }
 

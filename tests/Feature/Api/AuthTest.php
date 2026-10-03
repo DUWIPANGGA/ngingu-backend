@@ -4,12 +4,14 @@ namespace Tests\Feature\Api;
 
 use App\Models\User;
 use App\Notifications\NewDeviceLogin;
-use Illuminate\Auth\Notifications\VerifyEmail;
+use App\Notifications\QueuedVerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\SendQueuedNotifications;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Socialite\Facades\Socialite;
 use Tests\TestCase;
 
@@ -29,12 +31,13 @@ class AuthTest extends TestCase
 
     public function test_register_returns_201_with_token_and_sends_verification_email(): void
     {
-        Notification::fake();
+        Queue::fake();
 
         $response = $this->postJson('/api/register', $this->validPayload());
 
         $response->assertCreated()
             ->assertJsonPath('success', true)
+            ->assertJsonPath('message', 'Registrasi berhasil. Email verifikasi sedang diproses.')
             ->assertJsonPath('data.user.email', 'budi@example.com')
             ->assertJsonPath('data.user.role', 'user')
             ->assertJsonPath('data.user.email_verified_at', null)
@@ -47,7 +50,11 @@ class AuthTest extends TestCase
             'type' => 'scan_result',
         ]);
 
-        Notification::assertSentTo(User::where('email', 'budi@example.com')->first(), VerifyEmail::class);
+        $user = User::where('email', 'budi@example.com')->firstOrFail();
+        Queue::assertPushed(SendQueuedNotifications::class, function ($job) use ($user) {
+            return $job->notifiables->first()?->id === $user->id
+                && $job->notification instanceof QueuedVerifyEmail;
+        });
     }
 
     public function test_register_validates_unique_email_and_password_confirmation(): void
