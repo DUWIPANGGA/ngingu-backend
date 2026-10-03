@@ -1,82 +1,179 @@
-﻿name: Deploy to VPS
+﻿name: CI & Deploy
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy ngingu-be ke VPS
+  ci:
+    name: CI (Lint & Tests)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
 
     steps:
-      - name: Checkout kode
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -p ${{ secrets.VPS_PORT }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, dom, fileinfo, sqlite3
+          coverage: none
 
-      - name: Sync kode ke VPS via rsync
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-
+
+      - name: Copy env
         run: |
-          rsync -avz --delete \
-            --exclude='.git' \
-            --exclude='.env' \
-            --exclude='vendor/' \
-            --exclude='node_modules/' \
-            --exclude='storage/logs/' \
-            --exclude='storage/framework/cache/' \
-            --exclude='storage/framework/sessions/' \
-            --exclude='storage/framework/views/' \
-            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${{ secrets.VPS_PORT }}" \
+          cp .env.example .env
+          sed -i 's/^BROADCAST_CONNECTION=.*/BROADCAST_CONNECTION=null/' .env
+
+      - name: Install Composer dependencies
+        run: |
+          BROADCAST_CONNECTION=null \
+          composer install \
+            --no-interaction \
+            --prefer-dist \
+            --no-progress
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Run tests
+        run: vendor/bin/phpunit
+
+
+  deploy:
+    name: Deploy to VPS
+    needs: ci
+    runs-on: ubuntu-latest
+
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install sshpass & rsync
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sshpass rsync
+
+      - name: Sync files to server
+        run: |
+          export SSHPASS="${{ secrets.SERVER_PASSWORD }}"
+
+          sshpass -e rsync \
+            -e "ssh -p ${{ secrets.SERVER_PORT || '22' }} -o StrictHostKeyChecking=no" \
+            -avz --delete --progress \
+            --exclude '.env' \
+            --exclude '.env.production' \
+            --exclude '.git' \
+            --exclude '.secret' \
+            --exclude '.secret_deploy' \
+            --exclude 'node_modules' \
+            --exclude 'vendor' \
+            --exclude 'storage/app/public' \
+            --exclude 'storage/logs' \
+            --exclude 'storage/framework/cache' \
+            --exclude 'storage/framework/sessions' \
+            --exclude 'storage/framework/views' \
+            --exclude 'public/build' \
+            --exclude 'docker/data' \
             ./ \
-            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/ngingu/
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/ngingu/
 
-      - name: Rebuild & restart container
-        run: |
-          ssh -i ~/.ssh/deploy_key \
-              -o StrictHostKeyChecking=no \
-              -p ${{ secrets.VPS_PORT }} \
-              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
-              bash << 'ENDSSH'
-                set -e
-                export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
-                echo "==> Rebuild & restart container..."
-                cd /var/www/ngingu
-                docker compose up -d --build
+      - name: Build & restart container
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          port: ${{ secrets.SERVER_PORT || '22' }}
+          username: ${{ secrets.SERVER_USER }}
+          password: ${{ secrets.SERVER_PASSWORD }}
 
-                echo "==> Tunggu container siap (15s)..."
-                sleep 15
+          script: |
+            set -e
 
-                echo "==> Artisan migrate..."
-                docker exec ngingu-be php artisan migrate --force
+            cd /var/www/ngingu
 
-                echo "==> Optimize & cache..."
-                docker exec ngingu-be php artisan optimize:clear
-                docker exec ngingu-be php artisan config:cache
-                docker exec ngingu-be php artisan route:cache
-                docker exec ngingu-be php artisan view:cache
+            echo "=========================================="
+            echo "BUILD & RESTART NGINU"
+            echo "=========================================="
 
-                echo "==> Status:"
-                docker ps --filter name=ngingu-be --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
-          ENDSSH
+            sudo docker compose up -d --build --force-recreate
 
-      - name: Deploy berhasil
-        if: success()
-        run: |
-          echo "Deploy berhasil ke https://ngingu.duvi.asia"
-          echo "Commit  : ${{ github.sha }}"
-          echo "Oleh    : ${{ github.actor }}"
+            echo "==> Waiting for container..."
+            sleep 15
 
-      - name: Deploy gagal
-        if: failure()
-        run: |
-          echo "Deploy GAGAL pada commit ${{ github.sha }}"
-          echo "Lihat log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "=========================================="
+            echo "CONTAINER STATUS"
+            echo "=========================================="
+
+            sudo docker ps \
+              --filter name=ngingu-be \
+              --format "{{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+            echo "=========================================="
+            echo "CONTAINER HEALTH"
+            echo "=========================================="
+
+            STATUS=$(sudo docker inspect \
+              --format='{{.State.Status}}' \
+              ngingu-be)
+
+            echo "Status: $STATUS"
+
+            if [ "$STATUS" != "running" ]; then
+              echo "ERROR: ngingu-be is not running!"
+              echo "--- recent logs ---"
+              sudo docker logs ngingu-be --tail 100
+              exit 1
+            fi
+
+            echo "=========================================="
+            echo "DATABASE MIGRATION"
+            echo "=========================================="
+
+            sudo docker exec ngingu-be \
+              php artisan migrate --force
+
+            echo "=========================================="
+            echo "LARAVEL CACHE"
+            echo "=========================================="
+
+            sudo docker exec ngingu-be \
+              php artisan optimize:clear
+
+            sudo docker exec ngingu-be \
+              php artisan config:cache
+
+            sudo docker exec ngingu-be \
+              php artisan route:cache
+
+            sudo docker exec ngingu-be \
+              php artisan view:cache
+
+            echo "=========================================="
+            echo "HEALTH CHECK"
+            echo "=========================================="
+
+            curl -s -o /dev/null \
+              -w "HTTP %{http_code}\n" \
+              http://127.0.0.1:8010
+
+            echo "=========================================="
+            echo "RECENT LOGS"
+            echo "=========================================="
+
+            sudo docker logs ngingu-be --tail 30
+
+            echo "=========================================="
+            echo "DEPLOY SUCCESS"
+            echo "=========================================="
