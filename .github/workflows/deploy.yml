@@ -1,0 +1,82 @@
+﻿name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy ngingu-be ke VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout kode
+        uses: actions/checkout@v4
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p ${{ secrets.VPS_PORT }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Sync kode ke VPS via rsync
+        run: |
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='.env' \
+            --exclude='vendor/' \
+            --exclude='node_modules/' \
+            --exclude='storage/logs/' \
+            --exclude='storage/framework/cache/' \
+            --exclude='storage/framework/sessions/' \
+            --exclude='storage/framework/views/' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -p ${{ secrets.VPS_PORT }}" \
+            ./ \
+            ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/ngingu/
+
+      - name: Rebuild & restart container
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              -p ${{ secrets.VPS_PORT }} \
+              ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+              bash << 'ENDSSH'
+                set -e
+                export PATH=$PATH:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+
+                echo "==> Rebuild & restart container..."
+                cd /var/www/ngingu
+                docker compose up -d --build
+
+                echo "==> Tunggu container siap (15s)..."
+                sleep 15
+
+                echo "==> Artisan migrate..."
+                docker exec ngingu-be php artisan migrate --force
+
+                echo "==> Optimize & cache..."
+                docker exec ngingu-be php artisan optimize:clear
+                docker exec ngingu-be php artisan config:cache
+                docker exec ngingu-be php artisan route:cache
+                docker exec ngingu-be php artisan view:cache
+
+                echo "==> Status:"
+                docker ps --filter name=ngingu-be --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+          ENDSSH
+
+      - name: Deploy berhasil
+        if: success()
+        run: |
+          echo "Deploy berhasil ke https://ngingu.duvi.asia"
+          echo "Commit  : ${{ github.sha }}"
+          echo "Oleh    : ${{ github.actor }}"
+
+      - name: Deploy gagal
+        if: failure()
+        run: |
+          echo "Deploy GAGAL pada commit ${{ github.sha }}"
+          echo "Lihat log: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
