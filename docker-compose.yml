@@ -1,12 +1,15 @@
 services:
-  web:
+  ngingu-be:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: kaliwedi-web
+    # Nama & port harus sama dengan yang dipakai workflow (.github/workflows/deploy.yml)
+    # dan Cloudflare Tunnel (ngingu.duvi.asia -> http://localhost:8010).
+    container_name: ngingu-be
     restart: always
     ports:
-      - "8091:80"
+      # Loopback saja — akses publik lewat Cloudflare Tunnel, jangan 0.0.0.0.
+      - "127.0.0.1:8010:80"
     volumes:
       # Persist storage directory untuk uploads (foto laporan, avatar, APK)
       - ./storage:/var/www/html/storage
@@ -18,4 +21,5 @@ services:
 networks:
   shared_network:
     external: true
-    name: miomidev-web_miomidev-network
+    # DB_HOST=duvi-mysql dan ML service (container ngingu-ml) ada di network ini.
+    name: duvi-network
