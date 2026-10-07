@@ -173,7 +173,7 @@ jobs:
               http://127.0.0.1:8010
 
             echo "=========================================="
-            echo "RECENT LOGS"
+            echo "RECENT LOGSS"
             echo "=========================================="
 
             sudo docker logs ngingu-be --tail 30
