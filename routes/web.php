@@ -124,6 +124,8 @@ Route::middleware([AdminMiddleware::class])->group(function () {
     Route::get('/admin/models', [ModelAdminController::class, 'index'])->name('admin.models.index');
     Route::post('/admin/models', [ModelAdminController::class, 'store'])->name('admin.models.store');
     Route::post('/admin/models/rollback', [ModelAdminController::class, 'rollback'])->name('admin.models.rollback');
+    Route::post('/admin/models/test', [ModelAdminController::class, 'test'])->name('admin.models.test');
+    Route::get('/admin/models/status', [ModelAdminController::class, 'status'])->name('admin.models.status');
     Route::post('/admin/models/{model}/activate', [ModelAdminController::class, 'activate'])->name('admin.models.activate');
     Route::delete('/admin/models/{model}', [ModelAdminController::class, 'destroy'])->name('admin.models.destroy');
     Route::post('/admin/datasets', [ModelAdminController::class, 'storeDataset'])->name('admin.datasets.store');

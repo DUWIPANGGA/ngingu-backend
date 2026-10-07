@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Disease;
 use App\Models\MlDataset;
 use App\Models\MlModel;
+use App\Services\MlProbe;
 use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -26,6 +27,63 @@ class ModelAdminController extends Controller
             ->withQueryString();
 
         return view('admin.models.index', compact('models', 'datasets'));
+    }
+
+    /**
+     * Test request ke ML service (API.md §10 / FR-10).
+     *
+     * Foto dari form admin dikirim lewat multipart persis seperti yang akan
+     * dikirim ProcessScanJob, lalu ditampilkan 4 lapis: request, response mentah,
+     * hasil lapisan adaptasi, dan resolusi slug ke tabel diseases (FR-10.11).
+     *
+     * Tidak melempar error: service mati / 422 / timeout justru ditampilkan.
+     */
+    public function test(Request $request)
+    {
+        $data = $request->validate([
+            'image' => ['required', 'file', 'image', 'mimes:jpg,jpeg,png,webp', 'max:10240'],
+            'fish_type' => ['nullable', 'string', 'max:100'],
+        ], [
+            'image.required' => 'Pilih foto yang akan dikirim ke service ML.',
+            'image.file' => 'File tidak valid.',
+            'image.image' => 'File harus berupa gambar.',
+            'image.mimes' => 'Format gambar harus jpg, jpeg, png, atau webp.',
+            'image.max' => 'Ukuran foto melebihi 10 MB (batas API.md §2.7).',
+            'fish_type.max' => 'Jenis ikan maksimal 100 karakter.',
+        ]);
+
+        $gradcam = $request->boolean('gradcam');
+
+        $result = app(MlProbe::class)->predict(
+            $request->file('image'),
+            $data['fish_type'] ?? null,
+            $gradcam,
+        );
+
+        $errorCode = $result['error']['code'] ?? '';
+
+        Audit::log('model.tested', sprintf(
+            'Test request ML driver=%s: %s (HTTP %s%s).',
+            $result['driver'],
+            $result['ok'] ? 'berhasil' : 'gagal',
+            $result['http_status'] ?? '-',
+            $errorCode !== '' ? ', '.$errorCode : '',
+        ));
+
+        return back()
+            ->with('ml_test', $result)
+            ->with('ml_test_input', [
+                'fish_type' => $data['fish_type'] ?? null,
+                'gradcam' => $gradcam,
+            ]);
+    }
+
+    /**
+     * Cek status service (GET /health, FR-10.2) tanpa perlu upload foto.
+     */
+    public function status()
+    {
+        return back()->with('ml_health', app(MlProbe::class)->health());
     }
 
     public function store(Request $request)

@@ -38,17 +38,24 @@ return [
     |--------------------------------------------------------------------------
     | ML Service (FR-10, API.md §10)
     |--------------------------------------------------------------------------
-    | driver = fake  → deterministik untuk development & test (tanpa Python)
+    | driver = fake  → data uji semu (acak) untuk development & test, tanpa Python
     | driver = http  → panggil FastAPI sungguhan (server-to-server)
     */
 
     'ml' => [
         'driver' => env('ML_DRIVER', 'fake'),
-        'base_url' => rtrim(env('ML_BASE_URL', 'http://127.0.0.1:8000'), '/'),
+        // 8009: port ML service; 8000 sudah dipakai backend (run_dev.ps1).
+        'base_url' => rtrim(env('ML_BASE_URL', 'http://127.0.0.1:8009'), '/'),
         'timeout' => (int) env('ML_TIMEOUT', 30),
         'connect_timeout' => (int) env('ML_CONNECT_TIMEOUT', 5),
+        // FR-10.8 — minta GradCAM saat prediksi; hanya diekspos bila klien
+        // menambah ?gradcam=1, jadi biayanya murah.
+        'gradcam' => filter_var(env('ML_GRADCAM', true), FILTER_VALIDATE_BOOL),
         'fake_delay_ms' => (int) env('ML_FAKE_DELAY_MS', 0),
         'fake_model_version' => env('ML_FAKE_MODEL_VERSION', 'fake-v1'),
+        // Label map di repo monorepo (sebelah folder backend). Sumber urutan
+        // indeks model; berisi disease_id yang diisi `php artisan ml:sync-label-map`.
+        'label_map' => env('ML_LABEL_MAP', base_path('../ml-service/label_map.json')),
     ],
 
     /*

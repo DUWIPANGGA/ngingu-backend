@@ -69,6 +69,39 @@ class ImageStorage
         return $key !== '' && Storage::disk($this->disk())->exists($key);
     }
 
+    /**
+     * Simpan GradCAM hasil model (FR-10.8) → URL publik.
+     *
+     * GradCAM datang sebagai base64 dari ML service, tetapi kolom
+     * scan_images.gradcam_url hanya varchar(255) — jadi binarnya disimpan
+     * sebagai file dan hanya URL-nya yang dipertahankan.
+     */
+    public function storeGradcam(string $binary, ?string $scanId = null): string
+    {
+        $info = @getimagesizefromstring($binary);
+
+        if ($info === false) {
+            throw new \InvalidArgumentException('Bukan gambar valid');
+        }
+
+        $ext = match ($info[2] ?? 0) {
+            IMAGETYPE_PNG => 'png',
+            IMAGETYPE_WEBP => 'webp',
+            default => 'jpg',
+        };
+
+        $key = sprintf(
+            'gradcams/%s/%s.%s',
+            $scanId ?? 'anon',
+            Str::lower(Str::random(8)),
+            $ext
+        );
+
+        Storage::disk($this->disk())->put($key, $binary);
+
+        return $this->url($key);
+    }
+
     public function thumbKey(string $key): string
     {
         $dir = dirname($key);

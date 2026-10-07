@@ -43,7 +43,11 @@ class ProcessScanJob implements ShouldQueue
         $scan->update(['status' => 'processing']);
 
         try {
-            $prediction = $ml->predict($scan->id, $scan->images()->pluck('s3_key')->all());
+            $prediction = $ml->predict(
+                $scan->id,
+                $scan->images()->pluck('s3_key')->all(),
+                $scan->fish_type,
+            );
         } catch (MlException $e) {
             $scan->update([
                 'status' => 'failed',
@@ -73,7 +77,10 @@ class ProcessScanJob implements ShouldQueue
                 'disease_id' => $disease?->id,
                 'confidence_score' => $confidence,
                 'top_predictions' => $prediction['top_predictions'],
-                'low_confidence_warning' => $confidence < (float) config('ngingu.scan.low_confidence_threshold', 60),
+                // Nilai sudah distandarkan adapter; fallback ke threshold lokal
+                // bila payload lama tidak membawanya.
+                'low_confidence_warning' => (bool) ($prediction['low_confidence_warning']
+                    ?? $confidence < (float) config('ngingu.scan.low_confidence_threshold', 60)),
                 'processing_time_ms' => $prediction['processing_time_ms'],
                 'model_version' => $prediction['model_version'],
             ]
@@ -81,7 +88,25 @@ class ProcessScanJob implements ShouldQueue
 
         $scan->update(['status' => 'done']);
 
+        $this->storeGradcam($scan, $prediction['gradcam_url'] ?? null);
         $this->notify($scan, $disease, $confidence, $prediction['gradcam_url']);
+    }
+
+    /**
+     * GradCAM disimpan di foto utama — dipakai ScanController saat ?gradcam=1 (FR-10.8).
+     */
+    private function storeGradcam(FishScan $scan, ?string $gradcamUrl): void
+    {
+        if ($gradcamUrl === null) {
+            return;
+        }
+
+        $image = $scan->images()
+            ->orderByDesc('is_primary')
+            ->orderBy('order_index')
+            ->first();
+
+        $image?->update(['gradcam_url' => $gradcamUrl]);
     }
 
     private function resolveDisease(array $prediction): ?Disease

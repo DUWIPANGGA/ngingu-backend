@@ -36,7 +36,7 @@ Response envelope everywhere: `{success, message, data[, meta|errors]}` (API.md 
 composer install
 cp .env.example .env
 php artisan key:generate
-php artisan migrate --seed      # DatabaseSeeder → HelpSeeder (FAQ + help contacts)
+php artisan migrate --seed      # DatabaseSeeder → HelpSeeder + DiseaseSeeder (+ UserSeeder bila bukan production)
 npm install && npm run build    # admin panel assets
 php artisan serve               # API + admin panel
 php artisan queue:listen        # scan jobs (ProcessScanJob)
@@ -48,9 +48,19 @@ Or run the bundled pipeline: `composer setup` (install, env, key, migrate, npm b
 > `DB_CONNECTION=sqlite` + `QUEUE_CONNECTION=sync` for quick development.
 > phpunit always overrides to SQLite `:memory:` + `array` mail/queue/cache.
 
-### Create the first superadmin
+### Seeded accounts
 
-No admin account is seeded. After registering any user (via API or admin login page), promote it:
+`php artisan db:seed` creates two kinds of data:
+
+| Seeder | Content |
+| --- | --- |
+| `HelpSeeder` | FAQ + help contacts |
+| `DiseaseSeeder` | 11 diseases — the exact output classes of the ViT model, in class-index order (FR-10.11), incl. fish types, treatments & preventions |
+| `UserSeeder` | demo logins — **only when `APP_ENV` is not `production`** |
+
+Demo accounts (password `password`): `superadmin@ngingu.id`, `admin@ngingu.id`, `budi@ngingu.id`, `sari@ngingu.id`, `joko@ngingu.id`.
+
+No account is created in production. To promote your own account instead:
 
 ```bash
 php artisan tinker
@@ -59,12 +69,41 @@ php artisan tinker
 
 Then open `/admin` — access requires role `admin` or `superadmin` (default guard).
 
+### Keeping `diseases` in sync with the model (FR-10.11)
+
+`ml-service/label_map.json` is the source of truth for the model's class order
+(index `0..10`). `DiseaseSeeder` seeds the matching rows, then you push the
+resulting ids back into the label map:
+
+```bash
+php artisan ml:sync-label-map           # write disease_id into ml-service/label_map.json
+php artisan ml:sync-label-map --check   # verify only; exit 1 when out of sync (CI)
+```
+
+The path defaults to `<repo>/ml-service/label_map.json` and can be overridden
+with `ML_LABEL_MAP`. `GET /diseases` on the ML service exposes these ids
+(API.md §10.3).
+
 ## ML service (driver)
 
 | Env | Meaning |
 | --- | --- |
-| `ML_DRIVER=fake` | deterministic built-in predictor — development & tests, no Python service required |
+| `ML_DRIVER=fake` | built-in fake predictor (randomised, no Python service) — development & tests only |
 | `ML_DRIVER=http` | POSTs to the Python FastAPI service at `ML_BASE_URL` (API.md §10) |
+| `ML_BASE_URL=http://127.0.0.1:8009` | ML service address — **8009**, because `run_dev.ps1` already owns 8000. See `ml-service/README.md` for running it. |
+
+### Test a prediction request from the admin panel
+
+Admin → **Model ML & Dataset** has a *Test Permintaan ML* panel: pick a photo (optional
+`fish_type`, optional GradCAM) and it performs the exact multipart `POST /predict` the
+app would make, then shows four layers — the request, the raw JSON from Python, the
+normalized result the app uses (`MlPredictionNormalizer`), and whether the returned
+slug resolves to a row in `diseases` (FR-10.11). Failures are displayed, never thrown,
+so a stopped service or a `422 IMAGE_QUALITY_LOW` is visible in the panel.
+*Cek Status Service* runs `GET /health` alone.
+
+With `ML_DRIVER=fake` a banner reminds you the photo never leaves the backend.
+Routes: `POST /admin/models/test`, `GET /admin/models/status` (both admin-only).
 | `ML_TIMEOUT=30` | hard ML call limit in seconds |
 | `SCAN_WAIT_DEFAULT=120` / `SCAN_WAIT_MAX=300` | long-polling wait ceilings (API.md §4.3) |
 | `LOW_CONFIDENCE_THRESHOLD=60` | predictions below this return `confidence_level: "low"` |
