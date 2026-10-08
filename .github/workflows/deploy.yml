@@ -120,15 +120,15 @@ jobs:
             WWW_GID=$(sudo docker exec ngingu-be id -g www-data)
             echo "owner=$DEPLOY_UID group=$WWW_GID"
 
-            sudo chown -R "$DEPLOY_UID:$WWW_GID" storage
-            sudo find storage -type d -exec chmod 775 {} +
-            sudo find storage -type f -exec chmod 664 {} +
+            echo "${{ secrets.SERVER_PASSWORD }}" | sudo -S chown -R "$DEPLOY_UID:$WWW_GID" storage
+            echo "${{ secrets.SERVER_PASSWORD }}" | sudo -S find storage -type d -exec chmod 775 {} +
+            echo "${{ secrets.SERVER_PASSWORD }}" | sudo -S find storage -type f -exec chmod 664 {} +
+
+            echo "${{ secrets.SERVER_PASSWORD }}" | sudo -S docker compose up -d --build --force-recreate
 
             echo "=========================================="
             echo "BUILD & RESTART NGINU"
             echo "=========================================="
-
-            sudo docker compose up -d --build --force-recreate
 
             echo "==> Waiting for container..."
             sleep 15
