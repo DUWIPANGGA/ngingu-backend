@@ -64,6 +64,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Hash tiap file seeder → dibandingkan dengan marker di server
+      # (storage/framework/seeders.md5). Seeder yang berubah saja yang dijalankan.
+      # Dikecualikan:
+      #  - DatabaseSeeder.php: hanya pemanggil; menjalankannya = semua seeder.
+      #  - UserSeeder.php: akun demo, tidak boleh pernah dibuat di production.
+      - name: Hash seeders
+        id: seeder
+        run: |
+          list=""
+          for f in database/seeders/*.php; do
+            name=$(basename "$f")
+            case "$name" in
+              DatabaseSeeder.php|UserSeeder.php) continue ;;
+            esac
+            list="${list}$(md5sum "$f" | cut -d' ' -f1):${name};"
+          done
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+          echo "seeder terdeteksi: $list"
+
       - name: Install sshpass & rsync
         run: |
           sudo apt-get update
@@ -158,6 +177,37 @@ jobs:
 
             sudo docker exec ngingu-be \
               php artisan migrate --force
+
+            echo "=========================================="
+            echo "SEEDER OTOMATIS (hanya yang berubah)"
+            echo "=========================================="
+
+            # FR-09.2.1 — data penyakit (11 kelas model) & data bantuan harus
+            # ikut ter-deploy tiap kali file seeder di repo berubah. Marker
+            # disimpan di storage (tidak ikut rsync) agar deploy berikutnya
+            # tahu seeder mana yang sudah dijalankan.
+            SEED_LIST='${{ steps.seeder.outputs.list }}'
+            SEED_MARKER=storage/framework/seeders.md5
+            SEED_TMP="${SEED_MARKER}.tmp"
+            PREV="$(cat "$SEED_MARKER" 2>/dev/null || true)"
+            : > "$SEED_TMP"
+
+            printf '%s' "$SEED_LIST" | tr ';' '\n' | while IFS= read -r item; do
+              [ -z "$item" ] && continue
+              hash="${item%%:*}"
+              name="${item##*:}"
+              printf '%s=%s\n' "$name" "$hash" >> "$SEED_TMP"
+              old="$(printf '%s\n' "$PREV" | grep -F "${name}=" | cut -d= -f2 || true)"
+              if [ "$old" != "$hash" ]; then
+                echo "berubah: $name"
+                sudo docker exec ngingu-be php artisan db:seed \
+                  --class="Database\\Seeders\\${name%.php}" --force
+              else
+                echo "tetap  : $name"
+              fi
+            done
+
+            mv -f "$SEED_TMP" "$SEED_MARKER"
 
             echo "=========================================="
             echo "LARAVEL CACHE"
