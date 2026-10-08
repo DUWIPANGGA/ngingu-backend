@@ -6,6 +6,7 @@ use App\Models\Notification;
 use App\Models\NotificationSetting;
 use App\Models\User;
 use Closure;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Pengiriman notifikasi in-app + email sesuai preferensi pengguna
@@ -41,7 +42,17 @@ class Notifier
         }
 
         if ($setting->via_email && $mail !== null) {
-            $mail($user);
+            try {
+                $mail($user);
+            } catch (\Throwable $e) {
+                // Kegagalan SMTP (mis. host mail tidak ada di production) tidak boleh
+                // menggagalkan notifikasi in-app apalagi request yang memicunya.
+                Log::warning('Notifikasi email gagal dikirim', [
+                    'type' => $type,
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
     }
 }

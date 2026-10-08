@@ -7,6 +7,7 @@ use App\Models\NotificationSetting;
 use App\Models\User;
 use App\Support\Notifier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class NotificationTest extends TestCase
@@ -165,5 +166,34 @@ class NotificationTest extends TestCase
         Notifier::send($user, 'tips', 'Tips hari ini', 'Isi tips', ['id' => 2]);
 
         $this->assertDatabaseHas('notifications', ['user_id' => $user->id, 'type' => 'tips', 'title' => 'Tips hari ini']);
+    }
+
+    public function test_email_failure_does_not_break_notification(): void
+    {
+        $user = $this->user();
+
+        Log::spy();
+
+        // Meniru kegagalan SMTP di production (host mail tidak ter-resolve) —
+        // tidak boleh ada exception yang bocor ke pemanggil.
+        Notifier::send(
+            $user,
+            'scan_result',
+            'Hasil scan siap',
+            'Prediksi: White Spot (Ich) 87%.',
+            ['scan_id' => 1],
+            fn () => throw new \RuntimeException('Connection could not be established with host "mailpit:1025"'),
+        );
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $user->id,
+            'type' => 'scan_result',
+            'title' => 'Hasil scan siap',
+        ]);
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn (string $message, array $context = []) => $message === 'Notifikasi email gagal dikirim'
+                && $context['user_id'] === $user->id)
+            ->once();
     }
 }

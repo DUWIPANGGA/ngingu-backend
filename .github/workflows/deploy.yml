@@ -108,6 +108,21 @@ jobs:
             cd /var/www/ngingu
 
             echo "=========================================="
+            echo "STORAGE PERMISSION"
+            echo "=========================================="
+
+            # rsync menyalin permission dari repo (755) sehingga www-data tidak
+            # bisa menulis storage (upload foto scan gagal 500). Set ulang:
+            # owner = user deploy (untuk rsync), group = www-data (untuk PHP-FPM).
+            DEPLOY_UID=$(id -u)
+            WWW_GID=$(sudo docker exec ngingu-be id -g www-data)
+            echo "owner=$DEPLOY_UID group=$WWW_GID"
+
+            sudo chown -R "$DEPLOY_UID:$WWW_GID" storage
+            sudo find storage -type d -exec chmod 775 {} +
+            sudo find storage -type f -exec chmod 664 {} +
+
+            echo "=========================================="
             echo "BUILD & RESTART NGINU"
             echo "=========================================="
 

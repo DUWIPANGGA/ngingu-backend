@@ -89,7 +89,17 @@ class ProcessScanJob implements ShouldQueue
         $scan->update(['status' => 'done']);
 
         $this->storeGradcam($scan, $prediction['gradcam_url'] ?? null);
-        $this->notify($scan, $disease, $confidence, $prediction['gradcam_url']);
+
+        try {
+            $this->notify($scan, $disease, $confidence, $prediction['gradcam_url']);
+        } catch (\Throwable $e) {
+            // Notifikasi bersifat best-effort: hasil scan sudah `done`, kegagalan
+            // email/in-app tidak boleh menggagalkan job (queue sync = response 500).
+            Log::error('Gagal mengirim notifikasi hasil scan', [
+                'scan_id' => $scan->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
