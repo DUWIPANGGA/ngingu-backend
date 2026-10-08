@@ -38,4 +38,5 @@ class ForumCategoryFactory extends Factory
             'post_count' => 0,
         ];
     }
+    //update factory
 }
