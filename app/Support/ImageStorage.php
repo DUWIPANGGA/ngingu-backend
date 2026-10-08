@@ -117,7 +117,14 @@ class ImageStorage
 
     public function disk(): string
     {
-        return (string) config('ngingu.upload.disk', config('filesystems.default', 'public'));
+        $disk = (string) (config('ngingu.upload.disk') ?: config('filesystems.default') ?: 'public');
+
+        // Foto scan, GradCAM, dan avatar selalu diakses lewat URL publik
+        // /storage/... tanpa signature. Disk `local` (storage/app/private) menolak
+        // akses tanpa signature — ServeFile membalas 404 di production — sehingga
+        // semua gambar tidak tampil. Karena itu gambar tidak pernah memakai `local`
+        // (model/dataset ML tetap di sana lewat Storage::disk('local') eksplisit).
+        return $disk === 'local' ? 'public' : $disk;
     }
 
     private function compress(UploadedFile $file): string

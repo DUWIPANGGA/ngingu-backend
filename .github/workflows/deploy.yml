@@ -83,14 +83,8 @@ jobs:
             --exclude '.secret_deploy' \
             --exclude 'node_modules' \
             --exclude 'vendor' \
-            --exclude 'storage/app/public' \
-            --exclude 'storage/logs' \
-            --exclude 'storage/framework/cache' \
-            --exclude 'storage/framework/sessions' \
-            --exclude 'storage/framework/views' \
+            --exclude '/storage' \
             --exclude 'public/build' \
-            --exclude 'storage/app/private/scans' \
-            --exclude 'storage/app/private/gradcams' \
             --exclude 'docker/data' \
             ./ \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:/var/www/ngingu/
