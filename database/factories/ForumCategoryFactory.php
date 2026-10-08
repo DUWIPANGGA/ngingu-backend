@@ -15,7 +15,8 @@ class ForumCategoryFactory extends Factory
 
     public function definition(): array
     {
-        $name = fake()->unique()->randomElement([
+        // 1. Pilih nama secara acak tanpa fake()->unique()
+        $baseName = fake()->randomElement([
             'Identifikasi Penyakit',
             'Pengobatan & Perawatan',
             'Kualitas Air',
@@ -24,9 +25,13 @@ class ForumCategoryFactory extends Factory
             'Budidaya Pemula',
         ]);
 
+        // 2. Buat string acak unik untuk membedakan slug jika nama terpilih berulang
+        $uniqueSuffix = fake()->unique()->numberBetween(100, 99999);
+
         return [
-            'name' => $name,
-            'slug' => Str::slug($name),
+            'name' => $baseName,
+            // 3. Gabungkan slug nama dasar dengan suffix unik
+            'slug' => Str::slug($baseName) . '-' . $uniqueSuffix,
             'icon' => fake()->randomElement(['🦠', '💊', '💧', '🐟', '🏞️']),
             'description' => fake()->sentence(8),
             'sort_order' => fake()->numberBetween(1, 20),
