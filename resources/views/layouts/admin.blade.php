@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <link rel="icon" type="image/svg+xml" href="{{ asset('images/ngingu.svg') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ asset('images/ngingu.png') }}">
 
     <title>@yield('title', 'Admin Dashboard') - Ngingu Admin</title>
 
@@ -49,7 +49,7 @@
             <!-- Sidebar Header -->
             <div class="sb-header h-16 flex items-center justify-between px-4 bg-white/5 border-b border-white/10">
                 <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 min-w-0">
-                    <img src="{{ asset('images/ngingu.svg') }}" alt="Logo Ngingu" class="w-9 h-9 rounded-lg bg-white p-1 object-contain shadow-md shrink-0">
+                    <img src="{{ asset('images/ngingu.png') }}" alt="Logo Ngingu" class="w-9 h-9 rounded-lg bg-white p-1 object-contain shadow-md shrink-0">
                     <div class="sb-logo-text min-w-0">
                         <h1 class="font-extrabold text-lg leading-tight tracking-wider">Ngingu</h1>
                         <span class="text-[9px] text-[#E0F2F1]/80 uppercase tracking-widest font-semibold">Admin Panel</span>
