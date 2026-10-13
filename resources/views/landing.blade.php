@@ -9,7 +9,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ asset('css/landing.css') }}" />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%230EA5E9'/%3E%3Cellipse cx='32' cy='30' rx='16' ry='10' fill='%23fff'/%3E%3Cpath d='M16 30 8 24v12z' fill='%23fff'/%3E%3Ccircle cx='42' cy='27' r='2.5' fill='%230369A1'/%3E%3C/svg%3E" />
+  
+  <link rel="icon" type="image/svg+xml" href="images/ngingu_no_title.png" />
+  {{-- <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%230EA5E9'/%3E%3Cellipse cx='32' cy='30' rx='16' ry='10' fill='%23fff'/%3E%3Cpath d='M16 30 8 24v12z' fill='%23fff'/%3E%3Ccircle cx='42' cy='27' r='2.5' fill='%230369A1'/%3E%3C/svg%3E" /> --}}
 </head>
 <body>
 
@@ -30,7 +32,8 @@
     <div class="container nav-pill">
       <a href="#hero" class="brand">
         <span class="brand-logo" aria-hidden="true">
-          <svg viewBox="0 0 64 64" width="38" height="38">
+          <img src="images/ngingu_no_title.png" alt="" width="38" height="38">
+          {{-- <svg viewBox="0 0 64 64" width="38" height="38">
             <defs>
               <linearGradient id="lg-nav" x1="0" y1="0" x2="1" y2="1">
                 <stop offset="0" stop-color="#0EA5E9"/><stop offset="1" stop-color="#0369A1"/>
@@ -44,7 +47,7 @@
             <circle cx="42.5" cy="26.5" r="2.4" fill="#0369A1"/>
             <circle cx="48" cy="18" r="3.4" fill="none" stroke="#fff" stroke-width="1.6" opacity=".85"/>
             <circle cx="53" cy="13" r="2" fill="none" stroke="#fff" stroke-width="1.4" opacity=".85"/>
-          </svg>
+          </svg> --}}
         </span>
         <span class="brand-name">{{ $appName }}</span>
       </a>
