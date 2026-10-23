@@ -152,6 +152,26 @@ class MlClientHttpTest extends TestCase
         }
     }
 
+    public function test_connection_failure_is_mapped_to_unavailable_not_timeout(): void
+    {
+        $this->putImage('scans/s/0-a.jpg');
+
+        Http::fake(function () {
+            throw new ConnectionException('cURL error 6: Could not resolve host: ngingu-ml');
+        });
+
+        try {
+            app(MlClient::class)->predict('s', ['scans/s/0-a.jpg'], null);
+            $this->fail('Seharusnya melempar MlException');
+        } catch (MlException $e) {
+            // Koneksi gagal instan (mis. service beda Docker network sehingga
+            // hostname tidak resolve) wajib dilaporkan sebagai layanan tidak
+            // tersedia — BUKAN "melewati batas waktu" yang menyesatkan.
+            $this->assertSame('ML_UNAVAILABLE', $e->errorCode);
+            $this->assertSame(503, $e->getCode());
+        }
+    }
+
     public function test_unstructured_error_body_falls_back_to_unavailable(): void
     {
         $this->putImage('scans/s/0-a.jpg');

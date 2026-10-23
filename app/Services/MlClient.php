@@ -89,7 +89,20 @@ class MlClient
         try {
             $response = $request->post($baseUrl.$endpoint, $fields);
         } catch (ConnectionException $e) {
-            throw new MlException('ML_TIMEOUT', 'Prediksi melewati batas 30 detik. Coba lagi.', 504, $e);
+            // cURL error 28 = timeout sungguhan. Error koneksi lain (DNS tidak
+            // resolve, connection refused, dst.) berarti layanan ML tidak
+            // terjangkau — kegagalannya instan, jangan dilaporkan sebagai
+            // "melewati batas waktu" yang menyesatkan (insiden 23/10: backend &
+            // ML beda Docker network → semua scan gagal tapi pesan bilang
+            // "prediksi melewati batas 30 detik").
+            $timedOut = str_contains($e->getMessage(), 'error 28')
+                || str_contains(strtolower($e->getMessage()), 'timed out');
+
+            if ($timedOut) {
+                throw new MlException('ML_TIMEOUT', "Prediksi melewati batas {$timeout} detik. Coba lagi.", 504, $e);
+            }
+
+            throw new MlException('ML_UNAVAILABLE', 'Layanan prediksi sedang tidak tersedia. Coba lagi nanti.', 503, $e);
         }
 
         if ($response->failed()) {
