@@ -214,7 +214,7 @@ class AuthTest extends TestCase
 
         $googleUser = new class
         {
-            public function getUser(): array
+            public function getRaw(): array
             {
                 return ['aud' => 'klien-lain.apps.googleusercontent.com', 'email_verified' => true];
             }

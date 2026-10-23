@@ -128,7 +128,7 @@ class AuthController extends Controller
         // klien kita (claim aud) — id_token dari aplikasi lain ditolak.
         $expectedAud = (string) config('services.google.client_id');
         if ($expectedAud !== '') {
-            $aud = (string) ($googleUser->getUser()['aud'] ?? '');
+            $aud = (string) ($googleUser->getRaw()['aud'] ?? '');
             if ($aud !== $expectedAud) {
                 return $this->fail('Login Google gagal: token tidak ditujukan untuk aplikasi ini.', 401);
             }
@@ -141,7 +141,7 @@ class AuthController extends Controller
         }
 
         $user = User::where('email', $email)->first();
-        $googleVerified = (bool) ($googleUser->getUser()['email_verified'] ?? false);
+        $googleVerified = (bool) ($googleUser->getRaw()['email_verified'] ?? false);
 
         if (! $user) {
             $user = User::create([
