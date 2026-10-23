@@ -85,6 +85,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::get('/users/{id}', [ProfileController::class, 'show']);
 Route::get('/map/heatmap', [MapController::class, 'heatmap']);
+Route::get('/map/pins', [MapController::class, 'pins']);
 
 // §8 — Notifikasi, tips & outbreak
 Route::middleware('auth:sanctum')->group(function () {

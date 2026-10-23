@@ -8,11 +8,71 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Peta sebaran penyakit (API.md §7.11, FR-07.3).
+ * Peta sebaran penyakit (API.md §7.11 heatmap, §7.13 pins, FR-07.3).
  */
 class MapController extends Controller
 {
     use ApiResponse;
+
+    /**
+     * GET /api/map/pins (publik) — GIS: setiap scan individu yang memiliki
+     * koordinat tambak, digunakan mobile untuk menandai lokasi tepat di peta.
+     *
+     * Filter opsional: `days` (default 30), `disease_id`.
+     *
+     * Response item:
+     *  { id, lat, lng, pond_name, location_label, disease_id, disease_name,
+     *    severity, confidence_score, fish_type, scanned_at }
+     */
+    public function pins(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'days'       => 'sometimes|integer|min:1|max:365',
+            'disease_id' => 'sometimes|integer|exists:diseases,id',
+        ]);
+
+        $days = (int) ($data['days'] ?? 30);
+
+        $pins = \Illuminate\Support\Facades\DB::table('fish_scans')
+            ->join('user_ponds', 'user_ponds.id', '=', 'fish_scans.pond_id')
+            ->join('scan_results', 'scan_results.scan_id', '=', 'fish_scans.id')
+            ->join('diseases', 'diseases.id', '=', 'scan_results.disease_id')
+            ->where('fish_scans.status', 'done')
+            ->where('fish_scans.created_at', '>=', now()->subDays($days))
+            ->whereNotNull('user_ponds.location_lat')
+            ->whereNotNull('user_ponds.location_lng')
+            ->when(! empty($data['disease_id']), fn ($q) => $q->where('scan_results.disease_id', $data['disease_id']))
+            ->orderByDesc('fish_scans.created_at')
+            ->get([
+                'fish_scans.id          as id',
+                'user_ponds.location_lat  as lat',
+                'user_ponds.location_lng  as lng',
+                'user_ponds.name          as pond_name',
+                'user_ponds.location_label as location_label',
+                'scan_results.disease_id   as disease_id',
+                'diseases.name            as disease_name',
+                'diseases.severity        as severity',
+                'scan_results.confidence_score as confidence_score',
+                'fish_scans.fish_type     as fish_type',
+                'fish_scans.created_at    as scanned_at',
+            ])
+            ->map(fn ($row) => [
+                'id'               => $row->id,
+                'lat'              => round((float) $row->lat, 6),
+                'lng'              => round((float) $row->lng, 6),
+                'pond_name'        => $row->pond_name,
+                'location_label'   => $row->location_label,
+                'disease_id'       => (int) $row->disease_id,
+                'disease_name'     => $row->disease_name,
+                'severity'         => $row->severity,
+                'confidence_score' => round((float) $row->confidence_score, 1),
+                'fish_type'        => $row->fish_type,
+                'scanned_at'       => $row->scanned_at,
+            ])
+            ->values();
+
+        return $this->ok($pins);
+    }
 
     /**
      * GET /api/map/heatmap (publik).
