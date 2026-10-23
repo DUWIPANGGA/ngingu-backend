@@ -43,6 +43,8 @@ class MapController extends Controller
                 'diseases.name as disease_name',
                 'user_ponds.location_lat as lat',
                 'user_ponds.location_lng as lng',
+                'fish_scans.location_lat as scan_lat',
+                'fish_scans.location_lng as scan_lng',
             ]);
 
         $map = [];
@@ -52,9 +54,14 @@ class MapController extends Controller
             $map[$key] ??= ['province' => $key, 'cases' => 0, 'lats' => [], 'lngs' => [], 'diseases' => []];
             $map[$key]['cases']++;
 
-            if ($row->lat !== null && $row->lng !== null) {
-                $map[$key]['lats'][] = (float) $row->lat;
-                $map[$key]['lngs'][] = (float) $row->lng;
+            // Utamakan koordinat GPS saat scan dilakukan; lokasi kolam
+            // menjadi cadangan bila scan tidak membawa koordinat.
+            $lat = $row->scan_lat ?? $row->lat;
+            $lng = $row->scan_lng ?? $row->lng;
+
+            if ($lat !== null && $lng !== null) {
+                $map[$key]['lats'][] = (float) $lat;
+                $map[$key]['lngs'][] = (float) $lng;
             }
 
             $map[$key]['diseases'][$row->disease_id] = [

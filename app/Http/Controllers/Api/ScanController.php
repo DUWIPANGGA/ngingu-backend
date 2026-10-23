@@ -30,6 +30,8 @@ class ScanController extends Controller
             'fish_type' => 'nullable|string|max:64',
             'pond_id' => ['nullable', 'uuid', Rule::exists('user_ponds', 'id')->where('user_id', $request->user()->id)],
             'symptoms_desc' => 'nullable|string|max:1000',
+            'location_lat' => 'nullable|numeric|between:-90,90',
+            'location_lng' => 'nullable|numeric|between:-180,180',
         ], [
             'images.required' => 'Minimal 1 foto wajib diunggah.',
             'images.min' => 'Minimal 1 foto wajib diunggah.',
@@ -45,6 +47,8 @@ class ScanController extends Controller
             'pond_id' => $data['pond_id'] ?? null,
             'fish_type' => $data['fish_type'] ?? null,
             'symptoms_desc' => $data['symptoms_desc'] ?? null,
+            'location_lat' => $data['location_lat'] ?? null,
+            'location_lng' => $data['location_lng'] ?? null,
             'status' => 'processing',
         ]);
 

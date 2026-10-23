@@ -18,6 +18,8 @@ class FishScan extends Model
         'pond_id',
         'fish_type',
         'symptoms_desc',
+        'location_lat',
+        'location_lng',
         'status',
         'error_code',
         'error_message',
@@ -25,7 +27,10 @@ class FishScan extends Model
 
     protected function casts(): array
     {
-        return [];
+        return [
+            'location_lat' => 'float',
+            'location_lng' => 'float',
+        ];
     }
 
     public function user(): BelongsTo
