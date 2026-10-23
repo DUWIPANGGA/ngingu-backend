@@ -17,9 +17,18 @@ services:
       - ./.env:/var/www/html/.env
     networks:
       - shared_network
+      # ML service (container ngingu-ml) berjalan di compose-nya sendiri; network
+      # ini wajib disertakan agar hostname ngingu-ml resolve dari backend.
+      - ml_network
 
 networks:
   shared_network:
     external: true
-    # DB_HOST=duvi-mysql dan ML service (container ngingu-ml) ada di network ini.
+    # DB_HOST=duvi-mysql ada di network ini.
     name: duvi-network
+  ml_network:
+    external: true
+    # Network milik compose ml-service. Tanpa ini backend tidak bisa resolve
+    # hostname ngingu-ml — semua scan gagal instan tapi dilaporkan sebagai
+    # "prediksi melewati batas waktu" (504) yang menyesatkan.
+    name: ml-service_default
