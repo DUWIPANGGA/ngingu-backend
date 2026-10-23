@@ -207,4 +207,27 @@ class AuthTest extends TestCase
             ->assertStatus(401)
             ->assertJsonPath('success', false);
     }
+
+    public function test_google_login_rejects_token_with_wrong_audience(): void
+    {
+        config(['services.google.client_id' => 'klien-kita.apps.googleusercontent.com']);
+
+        $googleUser = new class
+        {
+            public function getUser(): array
+            {
+                return ['aud' => 'klien-lain.apps.googleusercontent.com', 'email_verified' => true];
+            }
+        };
+
+        Socialite::shouldReceive('driver')->once()->with('google')->andReturnSelf();
+        Socialite::shouldReceive('stateless')->andReturnSelf();
+        Socialite::shouldReceive('userFromToken')->andReturn($googleUser);
+
+        // aud tidak cocok dengan GOOGLE_CLIENT_ID → token sah tapi dari
+        // aplikasi lain, wajib ditolak (bukan dipakai untuk login).
+        $this->postJson('/api/auth/google', ['id_token' => 'token-sah-aud-lain'])
+            ->assertStatus(401)
+            ->assertJsonPath('success', false);
+    }
 }

@@ -124,6 +124,16 @@ class AuthController extends Controller
             return $this->fail('Token Google tidak valid atau sudah kedaluwarsa.', 401);
         }
 
+        // Hardening: bila GOOGLE_CLIENT_ID di-set, token harus ditujukan untuk
+        // klien kita (claim aud) — id_token dari aplikasi lain ditolak.
+        $expectedAud = (string) config('services.google.client_id');
+        if ($expectedAud !== '') {
+            $aud = (string) ($googleUser->getUser()['aud'] ?? '');
+            if ($aud !== $expectedAud) {
+                return $this->fail('Login Google gagal: token tidak ditujukan untuk aplikasi ini.', 401);
+            }
+        }
+
         $email = (string) $googleUser->getEmail();
 
         if ($email === '') {
