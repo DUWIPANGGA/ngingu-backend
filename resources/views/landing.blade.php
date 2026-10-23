@@ -10,13 +10,78 @@
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{{ asset('css/landing.css') }}" />
   
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // 1. Set kuncian koordinat khusus Indramayu
+        var batasIndramayu = L.latLngBounds(
+            L.latLng(-6.65, 107.85), // Batas Barat Daya
+            L.latLng(-6.10, 108.60)  // Batas Timur Laut
+        );
+
+        // 2. Inisialisasi peta + fitur kuncian wilayah
+        var map = L.map('peta-sebaran', {
+            center: [-6.3275, 108.3249],
+            zoom: 11,
+            minZoom: 10,
+            maxZoom: 18,
+            maxBounds: batasIndramayu,
+            maxBoundsViscosity: 1.0 // Efek membal pas digeser ke luar batas
+        });
+
+        // 3. Pake tampilan Google Maps Satelit Hybrid
+        L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+            subdomains: ['0', '1', '2', '3'],
+            updateWhenIdle: true,
+            keepBuffer: 2,
+            maxZoom: 20
+        }).addTo(map);
+
+        // 4. Jaga-jaga biar peta gak render kotak abu-abu
+        setTimeout(function () {
+            map.invalidateSize();
+        }, 500);
+
+        // --- TITIK WABAH (DARI KODEMU) ---
+
+        // 1. Wabah Merah (Kritis)
+        var wabahMerah = L.circle([-6.2780, 108.3249], {
+            color: 'red',
+            fillColor: '#f03',
+            fillOpacity: 0.4,
+            radius: 1000
+        }).addTo(map);
+        wabahMerah.bindPopup("<b>Waspada!</b><br>Tren Aeromonas Kritis di area ini.");
+
+        // 2. Wabah Kuning 1 (Sedang)
+        var wabahKuning1 = L.circle([-6.2980, 108.2820], {
+            color: '#ffc107',
+            fillColor: '#ffc107',
+            fillOpacity: 0.4,
+            radius: 2000
+        }).addTo(map);
+        wabahKuning1.bindPopup("Indikasi jamur skala sedang.");
+
+        // 3. Wabah Kuning 2 / Oranye (Sedang)
+        var wabahKuning2 = L.circle([-6.3280, 108.2220], {
+            color: '#fdba74',
+            fillColor: '#fdba74',
+            fillOpacity: 0.4,
+            radius: 2000
+        }).addTo(map);
+        wabahKuning2.bindPopup("Indikasi jamur skala sedang.");
+    });
+</script>
+
   <link rel="icon" type="image/svg+xml" href="images/ngingu_no_title.png" />
   {{-- <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='32' fill='%230EA5E9'/%3E%3Cellipse cx='32' cy='30' rx='16' ry='10' fill='%23fff'/%3E%3Cpath d='M16 30 8 24v12z' fill='%23fff'/%3E%3Ccircle cx='42' cy='27' r='2.5' fill='%230369A1'/%3E%3C/svg%3E" /> --}}
 </head>
 <body>
 
   @php
-      $waHref = 'https://wa.me/6281234567890';
+      $waHref = 'https://wa.me/6289512668224';
       foreach ($contacts as $c) {
           if ($c->type === 'whatsapp') {
               $d = preg_replace('/\D/', '', $c->value);
@@ -32,7 +97,7 @@
     <div class="container nav-pill">
       <a href="#hero" class="brand">
         <span class="brand-logo" aria-hidden="true">
-          <img src="images/ngingu_no_title.png" alt="" width="38" height="38">
+          <img src="images/ngingu_no_title.png" alt="" width="38" height="38" style="min-width: 32px;">
           {{-- <svg viewBox="0 0 64 64" width="38" height="38">
             <defs>
               <linearGradient id="lg-nav" x1="0" y1="0" x2="1" y2="1">
@@ -98,7 +163,9 @@
             <div class="phone">
               <div class="phone-notch"></div>
               <div class="phone-screen">
-                <div class="scan-frame">
+                <img src="images/dashboard.jpeg" alt="">
+                {{-- SCREEN HP --}}
+                {{-- <div class="scan-frame">
                   <span class="corner tl"></span><span class="corner tr"></span>
                   <span class="corner bl"></span><span class="corner br"></span>
                   <svg class="scan-fish" viewBox="0 0 120 70" width="120" height="70">
@@ -118,7 +185,7 @@
                   </div>
                   <div class="meter"><span style="width:92%"></span></div>
                   <div class="result-meta">Keyakinan AI <strong>92%</strong> · Bintik putih, sirip menyatu</div>
-                </div>
+                </div> --}}
               </div>
             </div>
             <div class="float-chip chip-1">Penanganan: garam ikan + naikkan suhu</div>
@@ -144,7 +211,7 @@
   <section class="section" id="kenapa">
     <div class="container">
       <div class="section-head reveal">
-        <span class="eyebrow">Kenapa Ngingu</span>
+        {{-- <span class="eyebrow">Kenapa Ngingu</span> --}}
         <h2>Satu aplikasi untuk seluruh siklus tambak</h2>
         <p>Dari deteksi dini sampai berbagi pengalaman — semuanya dirancang untuk petambak Indonesia.</p>
       </div>
@@ -204,7 +271,7 @@
   <section class="section section-alt" id="untuk-siapa">
     <div class="container">
       <div class="section-head reveal">
-        <span class="eyebrow">Untuk Siapa</span>
+        {{-- <span class="eyebrow">Untuk Siapa</span> --}}
         <h2>Dibuat untuk semua yang berkecimpung di air tawar</h2>
         <p>Dari kolam halaman rumah sampai pembudidayaan komersial.</p>
       </div>
@@ -247,7 +314,7 @@
   <section class="section" id="cara-kerja">
     <div class="container">
       <div class="section-head reveal">
-        <span class="eyebrow">Cara Kerja</span>
+        {{-- <span class="eyebrow">Cara Kerja</span> --}}
         <h2>Tiga langkah, satu jawaban</h2>
         <p>Tanpa alat khusus — cukup ponsel di saku petambak.</p>
       </div>
@@ -277,7 +344,7 @@
   <section class="section section-alt" id="penyakit">
     <div class="container">
       <div class="section-head reveal">
-        <span class="eyebrow">Ensiklopedia</span>
+        {{-- <span class="eyebrow">Ensiklopedia</span> --}}
         <h2>Kenali penyakit, kenali gejalanya</h2>
         <p>Puluhan penyakit ikan air tawar dengan panduan penanganan lengkap di aplikasi.</p>
       </div>
@@ -314,26 +381,35 @@
   <section class="section" id="peta">
     <div class="container peta-inner">
       <div class="peta-copy reveal">
-        <span class="eyebrow">Peta Sebaran</span>
+        {{-- <span class="eyebrow">Peta Sebaran</span> --}}
         <h2>Wabah terlihat sebelum menyentuh kolammu</h2>
         <p>
-          Kasus dari seluruh Indonesia digabungkan menjadi peta panas per provinsi.
-          Ketuk titik untuk melihat penyakit dominan, lalu buka ensikologinya langsung.
+          Pantau sebaran kasus penyakit ikan di sekitar wilayah Indramayu secara real-time. Ketuk titik indikasi pada peta untuk melihat tingkat keparahan & jenis penyakit.
         </p>
         <ul class="check-list">
-          <li>Titik kasus per provinsi, diperbarui harian</li>
-          <li>Riwayat 7, 30, dan 90 hari</li>
-          <li>Peringatan outbreak otomatis ke notifikasi</li>
+          <li>Pemetaan radius kasus berbasis lokasi</li>
+          <li>Indikator zona bahaya (Ringan hingga Kritis)</li>
+          <li>Akses langsung ke Ensiklopedia Penyakit</li>
         </ul>
         <a href="#unduh" class="btn btn-primary">Lihat di Aplikasi</a>
       </div>
       <div class="peta-visual reveal delay-1" aria-hidden="true">
         <div class="map-card">
-          <div class="map-blob">
+
+          <div class="map-card" style="overflow: hidden;">
+              <!-- Ini kanvas buat peta aslinya. Wajib dikasih tinggi (height) -->
+              <div id="peta-sebaran" style="width: 100%; height: 320px; border-radius: 16px;z-index: 0;"></div>
+              
+              <!-- Bagian map-legend biarin aja tetep di bawahnya -->
+              <div class="map-legend">
+                  <!-- ... kodingan legend dot ringan, sedang, berat ... -->
+              </div>
+          </div>
+          {{-- <div class="map-blob">
             <span class="heat h1"></span><span class="heat h2"></span>
             <span class="heat h3"></span><span class="heat h4"></span>
             <span class="map-pin p1"></span><span class="map-pin p2"></span><span class="map-pin p3"></span>
-          </div>
+          </div> --}}
           <div class="map-legend">
             <span><i class="dot d-ringan"></i> Ringan</span>
             <span><i class="dot d-sedang"></i> Sedang</span>
@@ -349,7 +425,7 @@
   <section class="section section-alt" id="testimoni">
     <div class="container">
       <div class="section-head reveal">
-        <span class="eyebrow">Komunitas</span>
+        {{-- <span class="eyebrow">Komunitas</span> --}}
         <h2>Dipercaya petambak di lapangan</h2>
       </div>
       <div class="carousel reveal">
@@ -358,17 +434,17 @@
           <figure class="quote-card">
             <div class="quote-stars" aria-label="5 dari 5">★★★★★</div>
             <blockquote>Kolam lele saya mendadak berbintik. Scan di Ngingu, ternyata white spot — langsung dapat langkah garamnya. Dua hari membaik.</blockquote>
-            <figcaption><span class="avatar">AP</span><span><strong>Agus P.</strong><span>Petambak lele · Boyolali</span></span></figcaption>
+            <figcaption><span class="avatar">AP</span><span><strong>Agus P.</strong><span>Petambak lele · Karangsong</span></span></figcaption>
           </figure>
           <figure class="quote-card">
             <div class="quote-stars" aria-label="5 dari 5">★★★★★</div>
             <blockquote>Yang paling kepakai itu forumnya. Unggah hasil scan, malamnya sudah ada jawaban dari petambak senior.</blockquote>
-            <figcaption><span class="avatar">RW</span><span><strong>Rina W.</strong><span>Budidaya nila · Sleman</span></span></figcaption>
+            <figcaption><span class="avatar">N</span><span><strong>Ningsih</strong><span>Kolam Ikan Mas · Pabean Ilir</span></span></figcaption>
           </figure>
           <figure class="quote-card">
             <div class="quote-stars" aria-label="5 dari 5">★★★★★</div>
-            <blockquote>Peta sebaran bikin saya waspada lebih awal waktu kasus koi herpes lagi naik di provinsi sebelah.</blockquote>
-            <figcaption><span class="avatar">BS</span><span><strong>Budi S.</strong><span>Kolam koi · Sidoarjo</span></span></figcaption>
+            <blockquote>Peta sebaran bikin saya waspada lebih awal pas kasus WFD lagi naik di kecamatan sebelah. Pintu air langsung tak tutup sementara, alhamdulillah panen aman.</blockquote>
+            <figcaption><span class="avatar">B</span><span><strong>Budiono</strong><span>Budidaya Udang · Losarang</span></span></figcaption>
           </figure>
         </div>
         <button class="car-btn" data-car-next="quotes" aria-label="Berikutnya">›</button>
@@ -380,6 +456,7 @@
   <section class="section cta-section" id="unduh">
     <div class="container">
       <div class="cta-card reveal">
+        <img src="{{ asset('images/tambak.png') }}" class="cta-bg-img" alt="" aria-hidden="true">
         <span class="spark s1" aria-hidden="true">✦</span>
         <span class="spark s2" aria-hidden="true">✦</span>
         <span class="spark s3" aria-hidden="true">✦</span>
@@ -393,7 +470,11 @@
           <span class="cta-note" id="apkNote">Versi {{ $apkVersion }} · Android 6.0+ · Data aman</span>
         </div>
         <div class="cta-visual" aria-hidden="true">
-          <svg viewBox="0 0 64 64" width="170" height="170">
+
+          {{-- <img src="images/ngingu_no_title.png" alt="" width="38" height="38"> --}}
+
+          {{-- GAMBAR IKAN --}}
+          {{-- <svg viewBox="0 0 64 64" width="170" height="170">
             <circle cx="32" cy="32" r="30" fill="#ffffff" opacity=".16"/>
             <ellipse cx="33" cy="29" rx="15" ry="9.5" fill="#fff"/>
             <path d="M18 29 9 23.5v11z" fill="#fff"/>
@@ -401,7 +482,7 @@
             <circle cx="42.5" cy="26.5" r="2.4" fill="#0369A1"/>
             <circle cx="49" cy="17" r="3.4" fill="none" stroke="#fff" stroke-width="1.6"/>
             <circle cx="54" cy="12" r="2" fill="none" stroke="#fff" stroke-width="1.4"/>
-          </svg>
+          </svg> --}}
         </div>
       </div>
     </div>
@@ -423,7 +504,7 @@
   <section class="section" id="faq">
     <div class="container faq-wrap">
       <div class="section-head reveal">
-        <span class="eyebrow">FAQ</span>
+        {{-- <span class="eyebrow">FAQ</span> --}}
         <h2>Pertanyaan yang sering diajukan</h2>
         <p>Belum menemukan jawaban? Hubungi kami lewat kontak di bawah.</p>
       </div>
@@ -521,5 +602,6 @@
   </button>
 
   <script src="{{ asset('js/landing.js') }}"></script>
+
 </body>
 </html>
