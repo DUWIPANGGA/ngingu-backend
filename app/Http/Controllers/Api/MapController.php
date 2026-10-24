@@ -16,7 +16,9 @@ class MapController extends Controller
 
     /**
      * GET /api/map/pins (publik) — GIS: setiap scan individu yang memiliki
-     * koordinat tambak, digunakan mobile untuk menandai lokasi tepat di peta.
+     * koordinat, digunakan mobile untuk menandai lokasi tepat di peta.
+     * Koordinat yang dipakai adalah GPS saat scan dilakukan; koordinat
+     * tambak menjadi cadangan bila scan tidak membawa GPS.
      *
      * Filter opsional: `days` (default 30), `disease_id`.
      *
@@ -34,19 +36,28 @@ class MapController extends Controller
         $days = (int) ($data['days'] ?? 30);
 
         $pins = \Illuminate\Support\Facades\DB::table('fish_scans')
-            ->join('user_ponds', 'user_ponds.id', '=', 'fish_scans.pond_id')
+            ->leftJoin('user_ponds', 'user_ponds.id', '=', 'fish_scans.pond_id')
             ->join('scan_results', 'scan_results.scan_id', '=', 'fish_scans.id')
             ->join('diseases', 'diseases.id', '=', 'scan_results.disease_id')
             ->where('fish_scans.status', 'done')
             ->where('fish_scans.created_at', '>=', now()->subDays($days))
-            ->whereNotNull('user_ponds.location_lat')
-            ->whereNotNull('user_ponds.location_lng')
+            ->where(function ($q) {
+                $q->where(function ($q2) {
+                    $q2->whereNotNull('fish_scans.location_lat')
+                        ->whereNotNull('fish_scans.location_lng');
+                })->orWhere(function ($q2) {
+                    $q2->whereNotNull('user_ponds.location_lat')
+                        ->whereNotNull('user_ponds.location_lng');
+                });
+            })
             ->when(! empty($data['disease_id']), fn ($q) => $q->where('scan_results.disease_id', $data['disease_id']))
             ->orderByDesc('fish_scans.created_at')
             ->get([
                 'fish_scans.id          as id',
-                'user_ponds.location_lat  as lat',
-                'user_ponds.location_lng  as lng',
+                'fish_scans.location_lat  as scan_lat',
+                'fish_scans.location_lng  as scan_lng',
+                'user_ponds.location_lat  as pond_lat',
+                'user_ponds.location_lng  as pond_lng',
                 'user_ponds.name          as pond_name',
                 'user_ponds.location_label as location_label',
                 'scan_results.disease_id   as disease_id',
@@ -58,8 +69,9 @@ class MapController extends Controller
             ])
             ->map(fn ($row) => [
                 'id'               => $row->id,
-                'lat'              => round((float) $row->lat, 6),
-                'lng'              => round((float) $row->lng, 6),
+                // Utamakan GPS saat scan; lokasi kolam jadi cadangan.
+                'lat'              => round((float) ($row->scan_lat ?? $row->pond_lat), 6),
+                'lng'              => round((float) ($row->scan_lng ?? $row->pond_lng), 6),
                 'pond_name'        => $row->pond_name,
                 'location_label'   => $row->location_label,
                 'disease_id'       => (int) $row->disease_id,
