@@ -175,7 +175,7 @@ h1, h2, h3, h4 { font-family: var(--font-head); line-height: 1.2; color: var(--t
 .phone-screen {
   position: relative; height: 100%; border-radius: 32px; overflow: hidden;
   background: linear-gradient(180deg, #E0F2FE, #F0F9FF 55%, #fff);
-  display: flex; flex-direction: column; gap: 12px; padding: 44px 14px 16px;
+  display: flex; flex-direction: column; gap: 12px; padding: 22px 0px 0px;
 }
 .scan-frame { position: relative; border-radius: 18px; background: rgba(255, 255, 255, .75); min-height: 140px; display: grid; place-items: center; overflow: hidden; }
 .corner { position: absolute; width: 26px; height: 26px; border: 3px solid var(--primary); }
@@ -341,7 +341,7 @@ h1, h2, h3, h4 { font-family: var(--font-head); line-height: 1.2; color: var(--t
 .heat { position: absolute; border-radius: 50%; filter: blur(26px); opacity: .75; }
 .heat.h1 { width: 130px; height: 130px; background: #FDE68A; top: 16%; left: 18%; }
 .heat.h2 { width: 110px; height: 110px; background: #FCA5A5; bottom: 14%; right: 20%; }
-.heat.h3 { width: 90px; height: 90px; background: #FDBA74; top: 44%; left: 46%; }
+.heat.h3 { width: 90px; height: 90px; background: #fdba74; top: 44%; left: 46%; }
 .heat.h4 { width: 74px; height: 74px; background: #86EFAC; top: 12%; right: 14%; }
 .map-pin { position: absolute; width: 16px; height: 16px; border-radius: 50% 50% 50% 0; background: var(--primary-dark); transform: rotate(-45deg); box-shadow: 0 0 0 5px rgba(3, 105, 161, .22); }
 .map-pin.p1 { top: 26%; left: 30%; }
@@ -412,6 +412,33 @@ h1, h2, h3, h4 { font-family: var(--font-head); line-height: 1.2; color: var(--t
 .cta-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .8rem; margin-bottom: 1rem; }
 .cta-note { display: inline-block; font-size: .8rem; color: rgba(255, 255, 255, .8); background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 255, 255, .3); padding: .4rem 1rem; border-radius: 999px; }
 .cta-visual { position: absolute; right: -30px; bottom: -34px; opacity: .5; pointer-events: none; }
+
+/* ── CTA Background ─────────────────────────────────────────────── */
+
+.cta-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.cta-bg-img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    z-index: 0;
+    opacity: 0.65;
+    pointer-events: none;
+}
+
+.cta-copy, 
+.spark, 
+.cta-visual {
+    position: relative;
+    z-index: 1;
+}
 
 /* ── Marquee fitur ─────────────────────────────────────────── */
 .marquee {
